@@ -1,0 +1,57 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Explicit version e.g. 1.2.3 (leave blank to use bump)."
+        required: false
+        default: ""
+      bump:
+        description: "Version bump (used when version is blank)."
+        type: choice
+        options: [patch, minor, major]
+        default: patch
+      ref:
+        description: "Commit/branch/tag to release (default: HEAD)."
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # need full tag history for --bump / moving tags
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Configure git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          IN_VERSION: ${{ inputs.version }}
+          IN_BUMP: ${{ inputs.bump }}
+          IN_REF: ${{ inputs.ref }}
+        run: |
+          set -euo pipefail
+          args=()
+          if [ -n "$IN_VERSION" ]; then
+            args+=("$IN_VERSION")
+          else
+            args+=(--bump "$IN_BUMP")
+          fi
+          [ -n "$IN_REF" ] && args+=(--ref "$IN_REF")
+          chmod +x release.sh
+          ./release.sh "${args[@]}" --yes

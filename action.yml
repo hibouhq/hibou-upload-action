@@ -1,0 +1,49 @@
+name: hibou-upload
+description: Upload SBOM, SARIF, coverage, and JUnit results to a Hibou instance.
+author: hibouhq
+branding:
+  icon: upload-cloud
+  color: purple
+
+inputs:
+  server:
+    description: "Hibou server URL (e.g. https://hibouhq.com)."
+    required: true
+  token:
+    description: "Hibou API token."
+    required: true
+  file:
+    description: "Path(s) to artifact files. Supports glob patterns and newline-separated paths."
+    required: true
+  complete:
+    description: "Complete the snapshot after uploading. Set to 'false' for intermediate uploads in multi-job pipelines."
+    required: false
+    default: "true"
+  expect:
+    description: "Expected number of distinct upload calls; the server auto-completes when this many are received."
+    required: false
+    default: "0"
+  org:
+    description: "Organization slug in provider/slug form (e.g. github/my-org). Auto-detected from the CI environment when omitted."
+    required: false
+  repo:
+    description: "Repository slug. Auto-detected from the CI environment when omitted."
+    required: false
+  ref:
+    description: "Git ref. Defaults to GITHUB_REF / GITEA_REF."
+    required: false
+  sha:
+    description: "Commit SHA. Defaults to GITHUB_SHA / GITEA_SHA."
+    required: false
+  reachability:
+    description: "CI-side reachability analysis languages: 'java', 'rust', or 'java,rust'. 'false' to skip."
+    required: false
+    default: "false"
+  bytecode-path:
+    description: "Java bytecode path override for non-standard build layouts."
+    required: false
+    default: ""
+
+runs:
+  using: node20
+  main: dist/index.js

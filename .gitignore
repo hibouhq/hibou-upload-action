@@ -1,0 +1,7 @@
+node_modules/
+lib/
+coverage/
+*.tsbuildinfo
+
+# NOTE: dist/ is intentionally COMMITTED — it is the bundled action entrypoint
+# that GitHub executes. `npm run build` regenerates it; the release verifies it.
