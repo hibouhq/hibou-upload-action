@@ -10,7 +10,7 @@ environment (GitHub `GITHUB_*`, Forgejo/Gitea `GITEA_*`, GitLab `CI_*`).
 ## Usage
 
 ```yaml
-- uses: hibouhq/hibou-upload-action@v1
+- uses: hibouhq/hibou-upload-action@v0.1
   with:
     server: ${{ vars.HIBOU_SERVER_URL }}   # e.g. https://hibouhq.com
     token: ${{ secrets.HIBOU_API_TOKEN }}
@@ -39,8 +39,11 @@ environment (GitHub `GITHUB_*`, Forgejo/Gitea `GITEA_*`, GitLab `CI_*`).
 
 ## Versioning
 
-Pin to a major tag (`@v1`) for automatic minor/patch updates, or a full tag
-(`@v1.0.0`) / commit SHA for strict reproducibility.
+Pre-1.0: the API may change between minor versions, so `@v0` moves across
+breaking releases. Pin the **minor** tag (`@v0.1`) for automatic patch updates,
+or a full tag (`@v0.1.0`) / commit SHA for strict reproducibility.
+
+Once 1.0 ships, pinning the major tag (`@v1`) becomes the recommended default.
 
 ## Notes
 
