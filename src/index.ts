@@ -7,12 +7,21 @@ import * as tc from '@actions/tool-cache'
 import { HttpClient } from '@actions/http-client'
 import { mapArch, mapOs, parsePatterns } from './util'
 
-/** Ask the Hibou server which CLI version it serves (best-effort). */
+/**
+ * Ask the Hibou server which CLI version it serves (best-effort).
+ *
+ * The API wraps every payload in an `{ data: … }` envelope, so the version
+ * lives one level down. Reading it from the top level silently yields
+ * 'unknown', which still works but poisons the tool-cache key — every run
+ * misses the cache and re-downloads the binary.
+ */
 async function serverVersion(server: string): Promise<string> {
   try {
     const http = new HttpClient('hibou-upload-action')
-    const res = await http.getJson<{ version?: string }>(`${server}/api/v1/bin/version`)
-    return res.result?.version ?? 'unknown'
+    const res = await http.getJson<{ data?: { version?: string } }>(
+      `${server}/api/v1/bin/version`,
+    )
+    return res.result?.data?.version || 'unknown'
   } catch {
     return 'unknown'
   }
