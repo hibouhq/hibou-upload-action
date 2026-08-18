@@ -34,7 +34,27 @@ environment (GitHub `GITHUB_*`, Forgejo/Gitea `GITEA_*`, GitLab `CI_*`).
 | `repo` | no | auto | Repository slug. Auto-detected when omitted. |
 | `ref` | no | auto | Git ref. Defaults to `GITHUB_REF` / `GITEA_REF`. |
 | `sha` | no | auto | Commit SHA. Defaults to `GITHUB_SHA` / `GITEA_SHA`. |
-| `reachability` | no | `false` | CI-side reachability analysis languages: `java`, `rust`, or `java,rust`. |
+| `reachability` | no | `false` | CI-side reachability analyses as `lang` or `lang:dir` entries, comma-separated. `go` = govulncheck (symbol-level, needs it on PATH), `java` = bytecode class references — build-tool agnostic, dir points at any compiled output (Maven `target/classes`, Gradle `build/classes/java/main`, or a jar), `rust` = crate references. Example: `go:go,java:java/target/classes,rust:rust`. **Monorepos:** for Java point at the repo root (`java:.`) — the scan recurses across every module's compiled output; Rust's `cargo metadata` covers all workspace crates from the root; Go needs one entry per nested `go.mod`. |
+| `working-directory` | no | — | Directory the reachability analyzer runs in (e.g. a module subdirectory). |
+
+`file` is required unless the step only runs `reachability` — a
+reachability-only step attaches call-graph verdicts to the snapshot an earlier
+upload step created:
+
+```yaml
+- uses: hibouhq/hibou-upload-action@v0.1     # 1. upload artifacts
+  with:
+    server: ${{ vars.HIBOU_SERVER_URL }}
+    token: ${{ secrets.HIBOU_API_TOKEN }}
+    file: '*.sarif'
+
+- uses: hibouhq/hibou-upload-action@v0.1     # 2. attach reachability verdicts
+  with:
+    server: ${{ vars.HIBOU_SERVER_URL }}
+    token: ${{ secrets.HIBOU_API_TOKEN }}
+    reachability: go
+    working-directory: go
+```
 | `bytecode-path` | no | — | Java bytecode path override for non-standard build layouts. |
 
 ## Versioning

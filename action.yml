@@ -13,8 +13,8 @@ inputs:
     description: "Hibou API token."
     required: true
   file:
-    description: "Path(s) to artifact files. Supports glob patterns and newline-separated paths."
-    required: true
+    description: "Path(s) to artifact files. Supports glob patterns and newline-separated paths. Optional when the step only runs reachability analysis."
+    required: false
   complete:
     description: "Complete the snapshot after uploading. Set to 'false' for intermediate uploads in multi-job pipelines."
     required: false
@@ -33,14 +33,14 @@ inputs:
     description: "Git ref. Defaults to GITHUB_REF / GITEA_REF."
     required: false
   sha:
-    description: "Commit SHA. Defaults to GITHUB_SHA / GITEA_SHA."
+    description: "Commit SHA. Auto-detected: on pull_request events the true PR head SHA (from the event payload), otherwise GITHUB_SHA / GITEA_SHA."
     required: false
   reachability:
-    description: "CI-side reachability analysis languages: 'java', 'rust', or 'java,rust'. 'false' to skip."
+    description: "CI-side reachability analyses as lang or lang:dir entries, comma-separated. Supported: go (govulncheck, symbol-level), java (bytecode class references; dir = compiled classes), rust (crate references). Example: 'go:go,java:java/target/classes,rust:rust'. 'false' to skip."
     required: false
     default: "false"
-  bytecode-path:
-    description: "Java bytecode path override for non-standard build layouts."
+  working-directory:
+    description: "Directory the reachability analyzer runs in (e.g. the module root). Defaults to the workspace root."
     required: false
     default: ""
 

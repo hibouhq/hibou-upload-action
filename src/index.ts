@@ -36,14 +36,18 @@ async function ensureCli(server: string): Promise<string> {
 
   const cached = tc.find('hibou', version, arch)
   if (cached) {
-    return path.join(cached, `hibou${ext}`)
+    const bin = path.join(cached, `hibou${ext}`)
+    core.info(`Using cached hibou ${version} at ${bin}`)
+    return bin
   }
 
   core.info(`Downloading hibou ${version} (${osName}/${arch}) from ${server}`)
   const downloaded = await tc.downloadTool(`${server}/api/v1/bin/${osName}/${arch}`)
   await fs.chmod(downloaded, 0o755)
   const dir = await tc.cacheFile(downloaded, `hibou${ext}`, 'hibou', version, arch)
-  return path.join(dir, `hibou${ext}`)
+  const bin = path.join(dir, `hibou${ext}`)
+  core.info(`Installed hibou ${version} at ${bin}`)
+  return bin
 }
 
 /** Explicit CI-context overrides; the CLI auto-detects anything omitted. */
@@ -67,42 +71,56 @@ function contextFlags(): string[] {
 async function run(): Promise<void> {
   const server = core.getInput('server', { required: true }).replace(/\/+$/, '')
   const token = core.getInput('token', { required: true })
-  const fileInput = core.getInput('file', { required: true })
+  const fileInput = core.getInput('file')
   const complete = core.getInput('complete') || 'true'
   const expect = core.getInput('expect') || '0'
   const reachability = core.getInput('reachability') || 'false'
-  const bytecodePath = core.getInput('bytecode-path')
+  const workingDirectory = core.getInput('working-directory')
+  const runsReachability = Boolean(reachability) && reachability !== 'false'
+
+  if (!fileInput && !runsReachability) {
+    throw new Error("`file` is required unless the step only runs `reachability`")
+  }
 
   const bin = await ensureCli(server)
   const env = { ...process.env, HIBOU_SERVER: server, HIBOU_TOKEN: token }
 
-  const globber = await glob.create(parsePatterns(fileInput).join('\n'), {
-    matchDirectories: false,
-  })
-  const files = await globber.glob()
-  if (files.length === 0) {
-    throw new Error('no files found matching the provided pattern(s)')
-  }
-  core.info(`Uploading ${files.length} file(s) to ${server}`)
-
-  const uploadArgs = ['upload', ...files, ...contextFlags()]
-  if (complete === 'false') {
-    uploadArgs.push('--complete=false')
-  }
-  if (expect && expect !== '0') {
-    uploadArgs.push(`--expect=${expect}`)
-  }
-  await exec.exec(bin, uploadArgs, { env })
-
-  if (reachability && reachability !== 'false') {
-    const analyzeArgs = ['analyze', 'reachability', ...contextFlags()]
-    for (const lang of parsePatterns(reachability.replace(/,/g, '\n'))) {
-      analyzeArgs.push('--lang', lang)
+  // A reachability-only step attaches verdicts to the snapshot an earlier
+  // upload step created — no files to send.
+  if (fileInput) {
+    const globber = await glob.create(parsePatterns(fileInput).join('\n'), {
+      matchDirectories: false,
+    })
+    const files = await globber.glob()
+    if (files.length === 0) {
+      throw new Error('no files found matching the provided pattern(s)')
     }
-    if (bytecodePath) {
-      analyzeArgs.push('--bytecode', bytecodePath)
+    core.info(`Uploading ${files.length} file(s) to ${server}`)
+
+    const uploadArgs = ['upload', ...files, ...contextFlags()]
+    if (complete === 'false') {
+      uploadArgs.push('--complete=false')
     }
-    await exec.exec(bin, analyzeArgs, { env })
+    if (expect && expect !== '0') {
+      uploadArgs.push(`--expect=${expect}`)
+    }
+    await exec.exec(bin, uploadArgs, { env })
+  }
+
+  if (runsReachability) {
+    // Entries are `lang` or `lang:dir` (e.g. `go:go,java:java/target/classes`)
+    // — each language analyzes its own module directory. A bare `lang` uses
+    // `working-directory`, else the workspace root.
+    for (const entry of parsePatterns(reachability.replace(/,/g, '\n'))) {
+      const [lang, dir] = entry.split(':', 2)
+      const target = dir || workingDirectory
+      core.info(`Reachability analysis: ${lang} in ${target || '.'}`)
+      const analyzeArgs = ['analyze', 'reachability', '--lang', lang, ...contextFlags()]
+      if (target) {
+        analyzeArgs.push('--dir', target)
+      }
+      await exec.exec(bin, analyzeArgs, { env })
+    }
   }
 }
 
