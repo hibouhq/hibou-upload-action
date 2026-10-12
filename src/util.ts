@@ -36,3 +36,12 @@ export function parsePatterns(input: string): string[] {
     .map((s) => s.trim())
     .filter((s) => s.length > 0)
 }
+
+/**
+ * The expected sha256 of the `os/arch` binary from the server's checksum
+ * map, lowercased; '' when the server reports none (older servers).
+ */
+export function checksumFor(sums: Record<string, string> | undefined, os: string, arch: string): string {
+  const sum = sums?.[`${os}/${arch}`]
+  return typeof sum === 'string' && /^[0-9a-fA-F]{64}$/.test(sum) ? sum.toLowerCase() : ''
+}

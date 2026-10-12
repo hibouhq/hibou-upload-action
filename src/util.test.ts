@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { mapArch, mapOs, parsePatterns } from './util'
+import { checksumFor, mapArch, mapOs, parsePatterns } from './util'
 
 describe('mapArch', () => {
   it('maps x64/x86_64/amd64 → amd64', () => {
@@ -33,5 +33,17 @@ describe('parsePatterns', () => {
   })
   it('returns empty for whitespace-only input', () => {
     expect(parsePatterns('  \n\n')).toEqual([])
+  })
+})
+
+describe('checksumFor', () => {
+  const sum = 'A'.repeat(64)
+  it('returns the platform checksum, lowercased', () => {
+    expect(checksumFor({ 'linux/amd64': sum }, 'linux', 'amd64')).toBe('a'.repeat(64))
+  })
+  it('returns empty when the server sends none or a malformed value', () => {
+    expect(checksumFor(undefined, 'linux', 'amd64')).toBe('')
+    expect(checksumFor({ 'darwin/arm64': sum }, 'linux', 'amd64')).toBe('')
+    expect(checksumFor({ 'linux/amd64': 'abc' }, 'linux', 'amd64')).toBe('')
   })
 })

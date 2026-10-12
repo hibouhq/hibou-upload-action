@@ -6,6 +6,9 @@ results to a [Hibou](https://hibouhq.com) instance.
 It downloads a version-matched `hibou` CLI from your Hibou `server` and runs
 `hibou upload`, auto-detecting `org` / `repo` / `ref` / `sha` from the CI
 environment (GitHub `GITHUB_*`, Forgejo/Gitea `GITEA_*`, GitLab `CI_*`).
+The downloaded (or cached) CLI is checked against the sha256 the server
+reports, which catches truncated downloads and damaged caches; it is not a
+defence against a compromised server.
 
 ## Usage
 
@@ -35,7 +38,14 @@ environment (GitHub `GITHUB_*`, Forgejo/Gitea `GITEA_*`, GitLab `CI_*`).
 | `ref` | no | auto | Git ref. Defaults to `GITHUB_REF` / `GITEA_REF`. |
 | `sha` | no | auto | Commit SHA. Defaults to `GITHUB_SHA` / `GITEA_SHA`. |
 | `reachability` | no | `false` | CI-side reachability analyses as `lang` or `lang:dir` entries, comma-separated. `go` = govulncheck (symbol-level, needs it on PATH), `java` = bytecode class references — build-tool agnostic, dir points at any compiled output (Maven `target/classes`, Gradle `build/classes/java/main`, or a jar), `rust` = crate references. Example: `go:go,java:java/target/classes,rust:rust`. **Monorepos:** for Java point at the repo root (`java:.`) — the scan recurses across every module's compiled output; Rust's `cargo metadata` covers all workspace crates from the root; Go needs one entry per nested `go.mod`. |
+| `scan` | no | `false` | Run the bundled scanners hibou plans for this commit (`hibou scan`) after the file uploads. Compile first for bytecode scanners. |
+| `scanners` | no | — | Restrict `scan` to these catalog scanner ids (pre-releases must be named). |
 | `working-directory` | no | — | Directory the reachability analyzer runs in (e.g. a module subdirectory). |
+
+What each scanner covers (full, a path subset, or only a PR's changed
+files) is declared once per repository in `.hibou.yaml`'s `scanners:`
+section, not in the workflow, so findings outside a partial scan read as
+"not re-checked" instead of fixed.
 
 `file` is required unless the step only runs `reachability` — a
 reachability-only step attaches call-graph verdicts to the snapshot an earlier
